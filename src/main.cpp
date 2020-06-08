@@ -4,6 +4,8 @@
 // https://github.com/adis1313/iBUSTelemetry-Arduino
 #include "iBUSTelemetry.h"
 
+#include "moving_array.h"
+
 #define IBUS_PIN 9
 #define GPS_PIN A0
 #define MAX_ELEMENTS 10 // calc max speed for last MAX_ELEMENTS counts
@@ -13,23 +15,7 @@ uint32_t lastSensorsUpdate = 0;
 
 TinyGPSPlus gps;
 
-float speedArray[MAX_ELEMENTS];
-int speedArrIdx = 0;
-
-float pushSpeedGetMax(float newReading) {
-  speedArray[speedArrIdx++] = newReading;
-  if (speedArrIdx == MAX_ELEMENTS) {
-    speedArrIdx = 0;
-  }
-  float maxVal = newReading;
-  for (int i = 0; i < MAX_ELEMENTS; i++) {
-    if (maxVal < speedArray[i]) {
-      maxVal = speedArray[i];
-    }
-  }
-  return maxVal;
-}
-
+MovingArray<float,10> speedArray;
 
 void setup() {
   Serial.begin(4800);
@@ -54,7 +40,7 @@ void updateSensors() {
     lastSensorsUpdate = now;
 
     float curSpeed = (gps.speed.kmph());
-    float maxSpeed = pushSpeedGetMax(curSpeed);
+    float maxSpeed = speedArray.push(curSpeed).getMax();
 
     Serial.print("SPEED ");
     Serial.print(curSpeed);
